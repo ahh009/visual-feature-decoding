@@ -1,0 +1,9 @@
+{"hcpmovies":{
+     'hdim': 96,
+     'vdim': 96,
+     'downloadpath': 'shared/hcp-7T_Movies/movie/unzip/Post_20140821_version/',
+     'movies': ['7T_MOVIE1_CC1_v2.mp4', '7T_MOVIE2_HO1_v2.mp4', '7T_MOVIE3_CC2_v2.mp4', '7T_MOVIE4_HO2_v2.mp4']
+     'savepath': 'workingdirectory/'
+    }
+}
+ 

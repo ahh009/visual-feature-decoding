@@ -1,2 +1,4 @@
 numpy
 pymoten
+matplotlib
+scikit-image
