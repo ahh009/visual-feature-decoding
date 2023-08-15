@@ -6,7 +6,8 @@
 4. Save features in .npz or .hdf file
 
 ## General folder directory to expect
-WORKINGDIRECTORY
+
+WORKINGDIRECTORY  
   |__ movie.mp4             --> movie to be converted
   |__ pngs                  --> folder for pngs if the script needs to convert from movie to png
       |__ png.001
