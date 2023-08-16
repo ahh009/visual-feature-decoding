@@ -55,8 +55,6 @@ def load_resize_image(img, hdim, vdim):
     -------
     image : resized array
     '''
-    gray_image : converted gray array
-    # img = io.imread(image)
     img = resize(img, (hdim, vdim))
     image = img_as_ubyte(img)
     return image
@@ -142,7 +140,7 @@ def push_thru_pyramid(json_filepath):
             fps = stimuli_data['fps']
             tf = stimuli_data['tf']
             sf = stimuli_data['sf']
-            ori = stimuli_data['ori']
+            dir = stimuli_data['dir']
             downloadpath = stimuli_data['downloadpath']
             movies = stimuli_data['movies']
             savepath = stimuli_data['savepath']
@@ -152,7 +150,7 @@ def push_thru_pyramid(json_filepath):
                                        stimulus_fps=fps, 
                                        temporal_frequencies=tf, 
                                        spatial_frequencies=sf, 
-                                       spatial_directions=ori)
+                                       spatial_directions=dir)
             
             # for each movie, load in data and extract motion energy from movie
             for movie in movies:
