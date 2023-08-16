@@ -24,6 +24,8 @@ from joblib import Parallel, delayed
 from time import time
 from scipy.signal import convolve
 from scipy import signal
+import _pickle as pickle
+
 
 
 def rgb_to_gray_luminosity(rgb_image):
@@ -166,10 +168,12 @@ def downsample_matrix(matrix, factor):
             downsampled_matrix[i, j] = np.sum(segment * signal.windows.hann(factor)) / factor
 
     return downsampled_matrix
-         
+
+
 def push_thru_pyramid(json_filepath):
     ''' Pushes gray-scale movie matrix through gabor pyramid. 
         Essentially a wrapper for Pymoten.
+        Downsamples to sampling rate of TR, designated in .json.
         Saves out feature .npz file.
     
     Parameters
@@ -201,6 +205,13 @@ def push_thru_pyramid(json_filepath):
                                        spatial_frequencies=sf, 
                                        spatial_directions=dirr)
             
+            filename = savepath + "pyramid.obj"
+            filehandler = open(filename, 'wb') 
+            pickle.dump(pyramid, filehandler)
+            print("saved pyramid!")
+            filterdictionary = pyramid.filters
+            np.savez(savepath + "filters.npz", filters = filterdictionary)
+            print("saved filters!")
             # for each movie, load in data and extract motion energy from movie
             for movie in movies:
                 movienoextension = movie[:len(movie)-4]
@@ -211,7 +222,7 @@ def push_thru_pyramid(json_filepath):
                 np.savez(savepath + movienoextension + "_features.npz", features=features.T)
                 # Example usage
                 print(features.shape)
-                downsample_factor = fps
+                downsample_factor = sr*fps
                 downsampled_matrix = downsample_matrix(features.T, downsample_factor)
                 np.savez(savepath + movienoextension + "_downsampledfeatures.npz", features=downsampled_matrix)
    
