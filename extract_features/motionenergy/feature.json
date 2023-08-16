@@ -1,0 +1,8 @@
+{"hcpmovies":{
+     "hdim": 90,
+     "vdim": 128,
+     "downloadpath": "/Users/jenholmberg/Workspace/neurohack/workingdirectory/movies/",
+     "movies": ["7T_MOVIE1_CC1_v2.mp4", "7T_MOVIE2_HO1_v2.mp4", "7T_MOVIE3_CC2_v2.mp4", "7T_MOVIE4_HO2_v2.mp4"],
+     "savepath": "workingdirectory/"
+    }
+}
