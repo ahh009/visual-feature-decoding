@@ -12,6 +12,8 @@ conda install -c conda-forge matplotlib scikit-video ffmpeg
 conda install ipykernel nb_conda_kernels jupyter
 conda install -c anaconda scikit-image
 python -m ipykernel install --user --name lowlevel
+pip install pymoten
+pillow=9.4.0 
 
 
 
