@@ -48,7 +48,7 @@ def rgb_to_gray_luminosity(rgb_image):
     gray_image = np.dot(rgb_image[..., :3], [red_weight, green_weight, blue_weight])
     #print timer
     end = time()
-    print("rgb2gray takes " + str(end - start))
+    #print("rgb2gray takes " + str(end - start))
     return gray_image.astype(np.uint8)
 
 def load_resize_image(img, hdim, vdim):
@@ -68,11 +68,11 @@ def load_resize_image(img, hdim, vdim):
     '''
     img = resize(img, (hdim, vdim), anti_aliasing=True)
     end = time()
-    print("load_resize takes " + str(end - start))
+    #print("load_resize takes " + str(end - start))
     start = time()
     image = img_as_ubyte(img)
     end = time()
-    print("ubyte takes " + str(end - start))
+    #print("ubyte takes " + str(end - start))
     return image
 
 def movie_to_gray_array(json_filepath):
@@ -105,33 +105,31 @@ def movie_to_gray_array(json_filepath):
             
             moviepath = os.path.join(downloadpath, movie)
             movienoextension = movie[:len(movie)-4]
-            output_directory = f'{savepath} + {movienoextension}/'
-            
-            # If the output directory for the movie doesn't exist, make it
-            if not os.path.exists(output_directory):
-                os.makedirs(output_directory)
+            if not os.path.exists(savepath + movienoextension + '_gray.npz'):
+
+                # Open the video file using VideoFileClip
+                video = VideoFileClip(moviepath)
+
+                # Extract total_frames
+                total_frames = (int(video.fps * video.duration))
+                gray_image_data = np.empty((hdim, vdim, total_frames), dtype=np.uint8)
+
+                # Start time keeper
+                pbar = tqdm(total=total_frames, desc=movie)
+
+                for idx, frame in enumerate(video.iter_frames(fps=video.fps, dtype='uint8')):
+                    img = load_resize_image(frame, hdim, vdim)
+                    gray_image_data[:, :, idx] = rgb_to_gray_luminosity(img)
+                    pbar.update(1)
+
+                pbar.close()
+                np.savez(savepath + movienoextension + '_gray.npz', movie=gray_image_data)
+
+                # Close the video file
+                video.reader.close()
+            else:
+                print(f"{movienoextension} gray movie already exists!")
                 
-            # Open the video file using VideoFileClip
-            video = VideoFileClip(moviepath)
-            
-            # Extract total_frames
-            total_frames = (int(video.fps * video.duration))
-            gray_image_data = np.empty((hdim, vdim, total_frames), dtype=np.uint8)
-            
-            # Start time keeper
-            pbar = tqdm(total=total_frames, desc=movie)
-
-            for idx, frame in enumerate(video.iter_frames(fps=video.fps, dtype='uint8')):
-                img = load_resize_image(frame, hdim, vdim)
-                gray_image_data[:, :, idx] = rgb_to_gray_luminosity(img)
-                pbar.update(1)
-
-            pbar.close()
-            np.savez(savepath + movienoextension + '_gray.npz', movie=gray_image_data)
-        
-            # Close the video file
-            video.reader.close()
-            
     #return list of saved movie .npz instead
 
 def hanning_filter_3D(frames, downsample_factor):
@@ -212,21 +210,56 @@ def push_thru_pyramid(json_filepath):
             filterdictionary = pyramid.filters
             np.savez(savepath + "filters.npz", filters = filterdictionary)
             print("saved filters!")
+            
             # for each movie, load in data and extract motion energy from movie
             for movie in movies:
+                moviepath = os.path.join(downloadpath, movie)
                 movienoextension = movie[:len(movie)-4]
-                data = np.load(savepath + movienoextension + "_gray.npz", allow_pickle=True)['movie']
-                #data expected to be nimages, vdim, hdim
-                reorganized_array = np.transpose(data, (2, 0, 1))
-                features = pyramid.project_stimulus(reorganized_array)
-                np.savez(savepath + movienoextension + "_features.npz", features=features.T)
-                # Example usage
-                print(features.shape)
-                downsample_factor = sr*fps
-                downsampled_matrix = downsample_matrix(features.T, downsample_factor)
-                np.savez(savepath + movienoextension + "_downsampledfeatures.npz", features=downsampled_matrix)
-   
                 
+                if not os.path.exists(savepath + movienoextension + "_downsampledfeatures.npz"):
+                    data = np.load(savepath + movienoextension + "_gray.npz", allow_pickle=True)['movie']
+                    #data expected to be nimages, vdim, hdim
+                    reorganized_array = np.transpose(data, (2, 0, 1))
+                    features = pyramid.project_stimulus(reorganized_array)
+                    np.savez(savepath + movienoextension + "_features.npz", features=features.T)
+                    # Example usage
+                    print(features.shape)
+                    downsample_factor = sr*fps
+                    downsampled_matrix = downsample_matrix(features.T, downsample_factor)
+                    np.savez(savepath + movienoextension + "_downsampledfeatures.npz", features=downsampled_matrix)
+                else:
+                    print(f"down_sampled features for {movie} already done!")
+    return None
+    
+def save_cleaned_features(json_filepath):
+    #open feature json file
+    with open(json_filepath) as f:
+        data = json.load(f)
+
+    # load in json data
+    for stimuli, stimuli_data in data.items():
+            fps = stimuli_data['fps']
+            sr = stimuli_data['samplerate']
+            dirr = stimuli_data['dir']
+            downloadpath = stimuli_data['downloadpath']
+            movies = stimuli_data['movies']
+            savepath = stimuli_data['savepath']
+            TRs = stimuli_data['TRs']
+
+            x_train = []
+            x_test = []
+
+            for i in TRs.values():
+                for key, value in i.items():
+                    if key.startswith('train'):
+                        x_train.append(features[:,value[0]:value[1]])
+                    if key.startswith('test'):
+                        x_test.append(features[:,value[0]:value[1]])
+
+            X_train = np.concatenate(x_train, axis=1)
+            X_test = np.stack(x_test)
+            np.savez(savepath + "features_all.npz", x_train=X_train, x_test=X_test)
+
                 
     
     
