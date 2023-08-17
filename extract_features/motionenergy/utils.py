@@ -251,7 +251,6 @@ def save_cleaned_features(json_filepath):
             for movie,runs in TRs.items():
                 features = np.load(f"/home/jovyan/workingdirectory/{movie}_downsampledfeatures.npz", allow_pickle=True)['features']
                 for key, run in runs.items():
-                    print(movie, key, run)
                     if key.startswith('train'):
                         x_train.append(features[:,run[0]:run[1]])
                     if key.startswith('test'):
@@ -259,7 +258,7 @@ def save_cleaned_features(json_filepath):
 
             X_train = np.concatenate(x_train, axis=1)
             X_test = np.stack(x_test)
-            np.savez(savepath + "features_all.npz", x_train=X_train, x_test=X_test)
+            np.savez(savepath + "me_features_all.npz", x_train=X_train, x_test=X_test)
             
     return None
 
