@@ -167,7 +167,6 @@ def downsample_matrix(matrix, factor):
 
     return downsampled_matrix
 
-
 def push_thru_pyramid(json_filepath):
     ''' Pushes gray-scale movie matrix through gabor pyramid. 
         Essentially a wrapper for Pymoten.
@@ -232,7 +231,6 @@ def push_thru_pyramid(json_filepath):
     return None
     
 def save_cleaned_features(json_filepath):
-    #open feature json file
     with open(json_filepath) as f:
         data = json.load(f)
 
@@ -249,16 +247,21 @@ def save_cleaned_features(json_filepath):
             x_train = []
             x_test = []
 
-            for i in TRs.values():
-                for key, value in i.items():
+            ### need to edit this to take in correct movies
+            for movie,runs in TRs.items():
+                features = np.load(f"/home/jovyan/workingdirectory/{movie}_downsampledfeatures.npz", allow_pickle=True)['features']
+                for key, run in runs.items():
+                    print(movie, key, run)
                     if key.startswith('train'):
-                        x_train.append(features[:,value[0]:value[1]])
+                        x_train.append(features[:,run[0]:run[1]])
                     if key.startswith('test'):
-                        x_test.append(features[:,value[0]:value[1]])
+                        x_test.append(features[:,run[0]:run[1]])
 
             X_train = np.concatenate(x_train, axis=1)
             X_test = np.stack(x_test)
             np.savez(savepath + "features_all.npz", x_train=X_train, x_test=X_test)
+            
+    return None
 
                 
     
