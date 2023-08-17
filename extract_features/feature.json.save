@@ -1,0 +1,15 @@
+
+{"hcpmovies": {
+     "hdim": 90,
+     "vdim": 128,
+     "fps": 24,
+     "dir": [0, 90, 180, 270],
+     "sf": [0,4],
+     "tf": [0,4],
+     "samplerate": 2,
+     "downloadpath": "/home/jovyan/shared/hcp-7T_Movies/movie/unzip/Post_20140821_version/",
+     "movies": ["7T_MOVIE1_CC1_v2.mp4", "7T_MOVIE2_HO1_v2.mp4", "7T_MOVIE3_CC2_v2.mp4", "7T_MOVIE4_HO2_v2.mp4"],
+     "savepath": "/home/jovyan/workingdirectory/"
+
+    }
+}
