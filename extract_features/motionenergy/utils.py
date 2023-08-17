@@ -9,7 +9,6 @@ import os
 import json
 import subprocess
 from skimage import io
-from skimage.transform import resize
 from skimage import img_as_ubyte
 import imageio
 import numpy as np
@@ -21,9 +20,16 @@ from skimage.transform import resize
 from tqdm import tqdm
 import moten
 import PIL.Image as pil_image
+from joblib import Parallel, delayed
+from time import time
+from scipy.signal import convolve
+from scipy import signal
+import _pickle as pickle
+
 
 
 def rgb_to_gray_luminosity(rgb_image):
+    start = time()
     ''' Converts RGB image to gray image.
     
     Parameters
@@ -40,9 +46,14 @@ def rgb_to_gray_luminosity(rgb_image):
     blue_weight = 0.1140
     
     gray_image = np.dot(rgb_image[..., :3], [red_weight, green_weight, blue_weight])
+    #print timer
+    end = time()
+    #print("rgb2gray takes " + str(end - start))
     return gray_image.astype(np.uint8)
 
 def load_resize_image(img, hdim, vdim):
+    start = time()
+
     ''' Resizes image to passed hdim and vdim.
     
     Parameters
@@ -55,10 +66,14 @@ def load_resize_image(img, hdim, vdim):
     -------
     image : resized array
     '''
-    img = resize(img, (hdim, vdim))
+    img = resize(img, (hdim, vdim), anti_aliasing=True)
+    end = time()
+    #print("load_resize takes " + str(end - start))
+    start = time()
     image = img_as_ubyte(img)
+    end = time()
+    #print("ubyte takes " + str(end - start))
     return image
-
 
 def movie_to_gray_array(json_filepath):
     ''' Converts movie to gray-scale matrix, and saves it out as an .npz. 
@@ -90,38 +105,73 @@ def movie_to_gray_array(json_filepath):
             
             moviepath = os.path.join(downloadpath, movie)
             movienoextension = movie[:len(movie)-4]
-            output_directory = f'{savepath} + {movienoextension}/'
-            
-            # If the output directory for the movie doesn't exist, make it
-            if not os.path.exists(output_directory):
-                os.makedirs(output_directory)
+            if not os.path.exists(savepath + movienoextension + '_gray.npz'):
+
+                # Open the video file using VideoFileClip
+                video = VideoFileClip(moviepath)
+
+                # Extract total_frames
+                total_frames = (int(video.fps * video.duration))
+                gray_image_data = np.empty((hdim, vdim, total_frames), dtype=np.uint8)
+
+                # Start time keeper
+                pbar = tqdm(total=total_frames, desc=movie)
+
+                for idx, frame in enumerate(video.iter_frames(fps=video.fps, dtype='uint8')):
+                    img = load_resize_image(frame, hdim, vdim)
+                    gray_image_data[:, :, idx] = rgb_to_gray_luminosity(img)
+                    pbar.update(1)
+
+                pbar.close()
+                np.savez(savepath + movienoextension + '_gray.npz', movie=gray_image_data)
+
+                # Close the video file
+                video.reader.close()
+            else:
+                print(f"{movienoextension} gray movie already exists!")
                 
-            # Open the video file using VideoFileClip
-            video = VideoFileClip(moviepath)
-            
-            # Extract total_frames
-            total_frames = (int(video.fps * video.duration))
-            gray_image_data = np.empty((hdim, vdim, total_frames), dtype=np.uint8)
-            
-            # Start time keeper
-            pbar = tqdm(total=total_frames, desc=movie)
-
-            for idx, frame in enumerate(video.iter_frames(fps=video.fps, dtype='uint8')):
-                img = load_resize_image(frame, hdim, vdim)
-                gray_image_data[:, :, idx] = rgb_to_gray_luminosity(img)
-                pbar.update(1)
-
-            pbar.close()
-            np.savez(savepath + movienoextension + '_gray.npz', movie=gray_image_data)
-        
-            # Close the video file
-            video.reader.close()
-            
     #return list of saved movie .npz instead
+
+def hanning_filter_3D(frames, downsample_factor):
+    # Number of frames and frame size.
+    num_frames, height, width = frames.shape
+
+    # Create a Hanning window as the low-pass filter.
+    hanning_window = np.hanning(downsample_factor)
+
+    # Initialize an array to store the filtered frames.
+    filtered_frames = np.zeros((num_frames // downsample_factor, height, width))
+
+    # Apply Hanning filter to each group of 'downsample_factor' frames.
+    for i in range(0, num_frames, downsample_factor):
+        group_of_frames = frames[i:i+downsample_factor]
+        filtered_group = convolve(group_of_frames, hanning_window[:, None, None], mode='same')
+        filtered_frames[i // downsample_factor] = np.mean(filtered_group, axis=0)
+
+    #np.savez(savepath + movienoextension + "_downsampledfeatures.npz", features=filtered_frames)
+    print("did hanning window! " + str(filtered_frames.shape))
+    return filtered_frames
+      
+def downsample_matrix(matrix, factor):
+    original_rows, original_cols = matrix.shape
+    new_cols = original_cols // factor
+
+    downsampled_matrix = np.empty((original_rows, new_cols))
+
+    for i in range(original_rows):
+        for j in range(new_cols):
+            start_idx = j * factor
+            end_idx = start_idx + factor
+            segment = matrix[i, start_idx:end_idx]
+            downsampled_matrix[i, j] = np.sum(segment * signal.windows.hann(factor)) / factor
+
+    return downsampled_matrix
+
 
 def push_thru_pyramid(json_filepath):
     ''' Pushes gray-scale movie matrix through gabor pyramid. 
         Essentially a wrapper for Pymoten.
+        Downsamples to sampling rate of TR, designated in .json.
         Saves out feature .npz file.
     
     Parameters
@@ -140,7 +190,8 @@ def push_thru_pyramid(json_filepath):
             fps = stimuli_data['fps']
             tf = stimuli_data['tf']
             sf = stimuli_data['sf']
-            dir = stimuli_data['dir']
+            sr = stimuli_data['samplerate']
+            dirr = stimuli_data['dir']
             downloadpath = stimuli_data['downloadpath']
             movies = stimuli_data['movies']
             savepath = stimuli_data['savepath']
@@ -150,17 +201,65 @@ def push_thru_pyramid(json_filepath):
                                        stimulus_fps=fps, 
                                        temporal_frequencies=tf, 
                                        spatial_frequencies=sf, 
-                                       spatial_directions=dir)
+                                       spatial_directions=dirr)
+            
+            filename = savepath + "pyramid.obj"
+            filehandler = open(filename, 'wb') 
+            pickle.dump(pyramid, filehandler)
+            print("saved pyramid!")
+            filterdictionary = pyramid.filters
+            np.savez(savepath + "filters.npz", filters = filterdictionary)
+            print("saved filters!")
             
             # for each movie, load in data and extract motion energy from movie
             for movie in movies:
+                moviepath = os.path.join(downloadpath, movie)
                 movienoextension = movie[:len(movie)-4]
-                data = np.load(savepath + movienoextension + "_gray.npz", allow_pickle=True)['movie']
-                #data expected to be nimages, vdim, hdim
-                reorganized_array = np.transpose(data, (2, 0, 1))
-                features = pyramid.project_stimulus(reorganized_array)
-                np.savez(savepath + movienoextension + "_features.npz", features=features)
                 
+                if not os.path.exists(savepath + movienoextension + "_downsampledfeatures.npz"):
+                    data = np.load(savepath + movienoextension + "_gray.npz", allow_pickle=True)['movie']
+                    #data expected to be nimages, vdim, hdim
+                    reorganized_array = np.transpose(data, (2, 0, 1))
+                    features = pyramid.project_stimulus(reorganized_array)
+                    np.savez(savepath + movienoextension + "_features.npz", features=features.T)
+                    # Example usage
+                    print(features.shape)
+                    downsample_factor = sr*fps
+                    downsampled_matrix = downsample_matrix(features.T, downsample_factor)
+                    np.savez(savepath + movienoextension + "_downsampledfeatures.npz", features=downsampled_matrix)
+                else:
+                    print(f"down_sampled features for {movie} already done!")
+    return None
+    
+def save_cleaned_features(json_filepath):
+    #open feature json file
+    with open(json_filepath) as f:
+        data = json.load(f)
+
+    # load in json data
+    for stimuli, stimuli_data in data.items():
+            fps = stimuli_data['fps']
+            sr = stimuli_data['samplerate']
+            dirr = stimuli_data['dir']
+            downloadpath = stimuli_data['downloadpath']
+            movies = stimuli_data['movies']
+            savepath = stimuli_data['savepath']
+            TRs = stimuli_data['TRs']
+
+            x_train = []
+            x_test = []
+
+            for i in TRs.values():
+                for key, value in i.items():
+                    if key.startswith('train'):
+                        x_train.append(features[:,value[0]:value[1]])
+                    if key.startswith('test'):
+                        x_test.append(features[:,value[0]:value[1]])
+
+            X_train = np.concatenate(x_train, axis=1)
+            X_test = np.stack(x_test)
+            np.savez(savepath + "features_all.npz", x_train=X_train, x_test=X_test)
+
                 
     
     
