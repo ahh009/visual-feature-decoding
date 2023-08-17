@@ -3,13 +3,17 @@
      "hdim": 90,
      "vdim": 128,
      "fps": 24,
-     "dir": [0, 90, 180, 270],
-     "sf": [0,4],
+     "dir": [0, 30, 60,  90, 120, 150, 180, 210, 240, 270, 300, 330],
+     "sf": [0,4,8,16],
      "tf": [0,4],
-     "samplerate": 2,
+     "samplerate": 1,
      "downloadpath": "/home/jovyan/shared/hcp-7T_Movies/movie/unzip/Post_20140821_version/",
      "movies": ["7T_MOVIE1_CC1_v2.mp4", "7T_MOVIE2_HO1_v2.mp4", "7T_MOVIE3_CC2_v2.mp4", "7T_MOVIE4_HO2_v2.mp4"],
-     "savepath": "/home/jovyan/workingdirectory/"
-
-    }
+     "savepath": "/home/jovyan/workingdirectory/",
+     "TRs": {"7T_MOVIE1_CC1_v2": {"train1": [20,265], "train2": [285,506], "train3": [526,714], "train4": [735,798], "test1":[818,901]},
+ 	    "7T_MOVIE2_HO1_v2": {"train5":[20,248],"train6":[267,526],"train7":[545,795],"test2":[815,898]},
+ 	    "7T_MOVIE3_CC2_v2": {"train8":[20,200],"train9": [220,405], "train10": [425,628], "train11": [650,793], "test3": [812,895]},
+ 	    "7T_MOVIE4_HO2_v2": {"train12":[20,254],"train13":[272,503],"train14":[522,777],"test4":[798,881]}
+    	     }
+  	}
 }
