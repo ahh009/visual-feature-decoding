@@ -37,9 +37,6 @@ def extract_faces(json_filepath):
     json_filepath: the .json file that houses all information to be passed to function
     
     '''
-    # # Open feature json file
-    # with open(json_filepath) as f:
-    #     data = json.load(f)
         
     # Opening JSON file
     with open(json_filepath) as f:
@@ -58,7 +55,6 @@ def extract_faces(json_filepath):
         for movie in movies:
             moviepath = os.path.join(downloadpath, movie)
             movienoextension = movie[:len(movie)-4]
-            # data = np.load(savepath + movienoextension + "_gray.npz", allow_pickle=True)['movie']
             
             video = VideoStim(moviepath)
             
@@ -73,11 +69,9 @@ def extract_faces(json_filepath):
             result_df = [f.to_df() for f in face_result]
             result_df = pd.concat(result_df)
             
-            # Show what's there...
-            result_df.head(10)
+            # # Show what's there...
+            # result_df.head(10)
             
             np.savez(savepath + movienoextension + '_faces.npz', features=result_df)
-            # np.save(savepath + movienoextension + '_faces.npz')
-            
-            # result_df.to_csv('FaceExtractor_' + movienoextension + '.csv', index = False)
+
 
