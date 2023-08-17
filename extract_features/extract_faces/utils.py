@@ -42,9 +42,9 @@ def extract_faces(json_filepath):
     #     data = json.load(f)
         
     # Opening JSON file
-    f = open('feature_AHH.json')
-    # returns JSON object as a dictionary
-    data = json.load(f)
+    with open(json_filepath) as f:
+        # returns JSON object as a dictionary
+        data = json.load(f)
         
     # load in relevant json data
     for stimuli, stimuli_data in data.items():
