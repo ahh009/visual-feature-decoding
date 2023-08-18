@@ -83,24 +83,26 @@ def movie_to_object_matrix(json_filepath):
                 video = VideoFileClip(moviepath)
             
                 # Extract total_frames
-                total_frames = (int(video.fps * video.duration))
+                fps = video.fps
+                total_frames = int(fps * video.duration)
 
                 # Initialize output matrix for video
-                fps = video.fps
-                objects_in_vid = np.zeros((21,total_frames/fps), dtype=int)
-
+                objects_in_vid = np.zeros((21,int(total_frames/fps)), dtype=int)
+               
                 # Start time keeper
                 pbar = tqdm(total=total_frames, desc=movie)
 
+                downsampled_idx = 0
                 for idx, frame in enumerate(video.iter_frames(fps=video.fps, dtype='uint8')):
                     if idx % fps == 0: 
+                        downsampled_idx += 1
                         input_tensor = preprocess_image(frame)
                         fcn_output = fcn(input_tensor)['out']
                         output_matrix = torch.argmax(fcn_output.squeeze(), dim=0).detach().cpu().numpy()
                         objects_in_image = np.unique(output_matrix)
                         for object in objects_in_image:
                             if object != 0:
-                                objects_in_vid[object,idx] == 1
+                                objects_in_vid[object,downsample_idx] = 1
                     pbar.update(1)
 
                 pbar.close()
