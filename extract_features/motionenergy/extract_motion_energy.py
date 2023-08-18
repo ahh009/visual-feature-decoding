@@ -8,6 +8,7 @@ def main():
     
     utils.movie_to_gray_array(args.json_filepath)
     utils.push_thru_pyramid(args.json_filepath)
+    utils.save_cleaned_features(args.json_filepath)
     
 if __name__ == "__main__":
     main()
